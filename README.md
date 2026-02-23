@@ -1,6 +1,6 @@
 # Disclaimer
 
-This project is somewhat vibecoded. It works, it is tested, but expect pragmatic choices over perfection.
+This project is somewhat vibecoded.
 
 # Simple Round
 
