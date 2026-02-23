@@ -1,0 +1,10 @@
+build/
+node_modules/
+
+.ruff_cache/
+.DS_Store
+
+*.pbw
+.lock-waf_darwin_build
+wscript
+package-lock.json

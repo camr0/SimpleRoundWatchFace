@@ -1,0 +1,38 @@
+{
+  "name": "simple-round",
+  "author": "MakeAwesomeHappen",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {
+    "@moddable/pebbleproxy": "^0.1.8",
+    "@rebble/clay": "^1.0.8"
+  },
+  "pebble": {
+    "displayName": "Simple Round",
+    "uuid": "f9de8923-6115-477e-b09b-0c71e90ff03e",
+    "projectType": "moddable",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "gabbro"
+    ],
+    "capabilities": [
+      "location",
+      "configurable"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "messageKeys": [
+      "DarkMode",
+      "UseFahrenheit",
+      "Use24Hour"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}
