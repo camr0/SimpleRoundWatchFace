@@ -27,6 +27,18 @@ module.exports = [
         "label": "Use 24-Hour Time",
         "description": "Off = 12-hour time.",
         "defaultValue": false
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowDigitalTime",
+        "label": "Show Digital Time",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowDate",
+        "label": "Show Date",
+        "defaultValue": true
       }
     ]
   },
@@ -42,6 +54,12 @@ module.exports = [
         "messageKey": "UseFahrenheit",
         "label": "Use Fahrenheit (°F)",
         "description": "Off = Celsius (°C).",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowWeather",
+        "label": "Show Weather",
         "defaultValue": true
       }
     ]

@@ -13,7 +13,10 @@ const R  = 118;                   // clock face outer radius
 const DEFAULT_SETTINGS = {
     darkMode:      false,
     useFahrenheit: true,
-    use24Hour:     false
+    use24Hour:     false,
+    showDigitalTime: true,
+    showDate:        true,
+    showWeather:     true
 };
 
 function loadSettings() {
@@ -222,23 +225,30 @@ function drawInfo(now) {
         timeStr = `${hr % 12 || 12}:${String(mn).padStart(2, "0")}`;
     }
 
-    const timeY   = CY - 65;
-    const timeTW  = render.getTextWidth(timeStr, timeFont);
-    render.drawText(timeStr, timeFont, fg, (render.width - timeTW) >> 1, timeY);
+    const timeY = CY - 65;
+    let textY = timeY;
 
-    const dateStr = `${DAYS[now.getDay()]} ${MONTHS[now.getMonth()]} ${String(now.getDate()).padStart(2, "0")}`;
-    const dw = render.getTextWidth(dateStr, smallFont);
-    render.drawText(dateStr, smallFont, fg,
-        (render.width - dw) >> 1,
-        timeY + timeFont.height + 4);
+    if (settings.showDigitalTime) {
+        const timeTW  = render.getTextWidth(timeStr, timeFont);
+        render.drawText(timeStr, timeFont, fg, (render.width - timeTW) >> 1, textY);
+        textY += timeFont.height + 4;
+    }
 
-    const iconY   = CY + 34;
-    drawWeatherIcon(CX, iconY, weatherCode);
+    if (settings.showDate) {
+        const dateStr = `${DAYS[now.getDay()]} ${MONTHS[now.getMonth()]} ${String(now.getDate()).padStart(2, "0")}`;
+        const dw = render.getTextWidth(dateStr, smallFont);
+        render.drawText(dateStr, smallFont, fg, (render.width - dw) >> 1, textY);
+    }
 
-    const unit    = settings.useFahrenheit ? "F" : "C";
-    const tempStr = weatherTemp !== null ? `${weatherTemp}°${unit}` : "--°";
-    const tw2     = render.getTextWidth(tempStr, smallFont);
-    render.drawText(tempStr, smallFont, tempColor, (render.width - tw2) >> 1, iconY + 16);
+    if (settings.showWeather) {
+        const iconY = CY + 34;
+        drawWeatherIcon(CX, iconY, weatherCode);
+
+        const unit = settings.useFahrenheit ? "F" : "C";
+        const tempStr = weatherTemp !== null ? `${weatherTemp}°${unit}` : "--°";
+        const tw2 = render.getTextWidth(tempStr, smallFont);
+        render.drawText(tempStr, smallFont, tempColor, (render.width - tw2) >> 1, iconY + 16);
+    }
 }
 
 // ─── Main draw ────────────────────────────────────────────────────────────────
@@ -278,6 +288,7 @@ let fetching = false;
 let refetchAfterCurrent = false;
 
 function requestLocation() {
+    if (!settings.showWeather) return;
     if (fetching) return;
     if (location) {
         try { location.close(); } catch (e) {}
@@ -340,7 +351,7 @@ watch.addEventListener("hourchange",   requestLocation);
 // ─── Settings via Clay / AppMessage ──────────────────────────────────────────
 
 const message = new Message({
-    keys: ["DarkMode", "UseFahrenheit", "Use24Hour"],
+    keys: ["DarkMode", "UseFahrenheit", "Use24Hour", "ShowDigitalTime", "ShowDate", "ShowWeather"],
     onReadable() {
         try {
             const msg = this.read();
@@ -354,7 +365,17 @@ const message = new Message({
             const u24 = msg.get("Use24Hour");
             if (u24 !== undefined) settings.use24Hour = u24 === 1;
 
+            const sdt = msg.get("ShowDigitalTime");
+            if (sdt !== undefined) settings.showDigitalTime = sdt === 1;
+
+            const sd = msg.get("ShowDate");
+            if (sd !== undefined) settings.showDate = sd === 1;
+
+            const sw = msg.get("ShowWeather");
+            if (sw !== undefined) settings.showWeather = sw === 1;
+
             const unitChanged = uf !== undefined;
+            const weatherVisibilityChanged = sw !== undefined;
             if (unitChanged) {
                 weatherTemp = null;
                 weatherCode = -1;
@@ -364,7 +385,15 @@ const message = new Message({
             updateColors();
             drawScreen();
 
-            if (unitChanged) {
+            if (weatherVisibilityChanged && !settings.showWeather) {
+                if (location) {
+                    try { location.close(); } catch (e) {}
+                    location = null;
+                }
+                refetchAfterCurrent = false;
+            }
+
+            if (unitChanged || (weatherVisibilityChanged && settings.showWeather)) {
                 if (fetching) {
                     refetchAfterCurrent = true;
                 } else if (lastLatitude !== null && lastLongitude !== null) {

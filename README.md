@@ -44,6 +44,9 @@ Available toggles:
 - Dark Mode
 - Use Fahrenheit
 - Use 24-Hour Time
+- Show Digital Time
+- Show Date
+- Show Weather
 
 Settings and recent weather are persisted in `localStorage`.
 

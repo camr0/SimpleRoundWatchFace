@@ -1,7 +1,7 @@
 {
   "name": "simple-round",
-  "author": "MakeAwesomeHappen",
-  "version": "1.0.0",
+  "author": "Ali Aslam (camr0)",
+  "version": "1.1.0",
   "keywords": [
     "pebble-app"
   ],
@@ -29,7 +29,10 @@
     "messageKeys": [
       "DarkMode",
       "UseFahrenheit",
-      "Use24Hour"
+      "Use24Hour",
+      "ShowDigitalTime",
+      "ShowDate",
+      "ShowWeather"
     ],
     "resources": {
       "media": []
