@@ -50,7 +50,7 @@ function updateColors() {
     bg        = dark ? render.makeColor(0,   0,   0)   : render.makeColor(255, 255, 255);
     fg        = dark ? render.makeColor(255, 255, 255) : render.makeColor(0,   0,   0);
     fgDim     = dark ? render.makeColor(90,  90,  90)  : render.makeColor(160, 160, 160);
-    weatherIconColor = dark ? render.makeColor(125, 125, 125) : render.makeColor(80, 80, 80);
+    weatherIconColor = dark ? render.makeColor(165, 165, 165) : render.makeColor(80, 80, 80);
     tempColor = dark ? render.makeColor(100, 180, 255) : render.makeColor(0,   110, 210);
 }
 
