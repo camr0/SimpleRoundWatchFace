@@ -39,6 +39,32 @@ module.exports = [
         "messageKey": "ShowDate",
         "label": "Show Date",
         "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowBattery",
+        "label": "Show Battery",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowBatteryLowOnly",
+        "label": "Only Show Low Battery",
+        "description": "Show battery indicator only at 20% or lower.",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowBluetooth",
+        "label": "Show Bluetooth",
+        "defaultValue": false
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowDisconnectedBluetooth",
+        "label": "Show Disconnected BT",
+        "description": "Show BT icon in red when disconnected.",
+        "defaultValue": true
       }
     ]
   },

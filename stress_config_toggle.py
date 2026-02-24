@@ -51,6 +51,8 @@ def send_config(
     show_digital_time,
     show_date,
     show_weather,
+    show_battery,
+    show_bluetooth,
 ):
     payload = {
         "DarkMode": {"value": bool(dark_mode)},
@@ -59,6 +61,8 @@ def send_config(
         "ShowDigitalTime": {"value": bool(show_digital_time)},
         "ShowDate": {"value": bool(show_date)},
         "ShowWeather": {"value": bool(show_weather)},
+        "ShowBattery": {"value": bool(show_battery)},
+        "ShowBluetooth": {"value": bool(show_bluetooth)},
     }
     encoded = urllib.parse.quote(json.dumps(payload, separators=(",", ":")), safe="")
     url = f"http://127.0.0.1:{port}/close?{encoded}"
@@ -75,6 +79,8 @@ def run_one_toggle(
     show_digital_time,
     show_date,
     show_weather,
+    show_battery,
+    show_bluetooth,
     timeout_s=10.0,
 ):
     baseline_ports = list_python_listen_ports()
@@ -107,6 +113,8 @@ def run_one_toggle(
                         show_digital_time=show_digital_time,
                         show_date=show_date,
                         show_weather=show_weather,
+                        show_battery=show_battery,
+                        show_bluetooth=show_bluetooth,
                     )
                     if status == 200:
                         return port, status
@@ -154,7 +162,7 @@ def main():
     parser.add_argument(
         "--toggle-visibility",
         action="store_true",
-        help="also alternate ShowDigitalTime, ShowDate, and ShowWeather",
+        help="also alternate ShowDigitalTime, ShowDate, ShowWeather, ShowBattery, ShowBluetooth",
     )
     args = parser.parse_args()
 
@@ -167,10 +175,14 @@ def main():
                 show_digital_time = (i % 3) != 1
                 show_date = (i % 3) != 2
                 show_weather = (i % 3) != 0
+                show_battery = (i % 4) != 1
+                show_bluetooth = (i % 4) != 2
             else:
                 show_digital_time = True
                 show_date = True
                 show_weather = True
+                show_battery = True
+                show_bluetooth = True
 
             port, status = run_one_toggle(
                 use_f,
@@ -179,11 +191,16 @@ def main():
                 show_digital_time,
                 show_date,
                 show_weather,
+                show_battery,
+                show_bluetooth,
             )
             unit = "F" if use_f else "C"
             theme = "dark" if dark_mode else "light"
             clock = "24h" if use_24_hour else "12h"
-            vis = f"T:{int(show_digital_time)} D:{int(show_date)} W:{int(show_weather)}"
+            vis = (
+                f"T:{int(show_digital_time)} D:{int(show_date)} "
+                f"W:{int(show_weather)} B:{int(show_battery)} BT:{int(show_bluetooth)}"
+            )
             print(
                 f"{i + 1}/{args.count} -> {unit}, {theme}, {clock}, {vis} via :{port} (HTTP {status})"
             )

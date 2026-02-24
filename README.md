@@ -47,6 +47,10 @@ Available toggles:
 - Show Digital Time
 - Show Date
 - Show Weather
+- Show Battery
+- Only Show Low Battery
+- Show Bluetooth
+- Show Disconnected BT
 
 Settings and recent weather are persisted in `localStorage`.
 

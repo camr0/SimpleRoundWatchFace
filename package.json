@@ -1,7 +1,7 @@
 {
   "name": "simple-round",
   "author": "Ali Aslam (camr0)",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "keywords": [
     "pebble-app"
   ],
@@ -32,7 +32,11 @@
       "Use24Hour",
       "ShowDigitalTime",
       "ShowDate",
-      "ShowWeather"
+      "ShowWeather",
+      "ShowBattery",
+      "ShowBatteryLowOnly",
+      "ShowBluetooth",
+      "ShowDisconnectedBluetooth"
     ],
     "resources": {
       "media": []

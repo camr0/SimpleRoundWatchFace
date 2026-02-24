@@ -1,6 +1,7 @@
 import Poco    from "commodetto/Poco";
 import Message  from "pebble/message";
 import Location from "embedded:sensor/Location";
+import Battery  from "embedded:sensor/Battery";
 
 const render = new Poco(screen);
 
@@ -16,7 +17,11 @@ const DEFAULT_SETTINGS = {
     use24Hour:     false,
     showDigitalTime: true,
     showDate:        true,
-    showWeather:     true
+    showWeather:     true,
+    showBattery:     true,
+    showBatteryLowOnly: true,
+    showBluetooth:   false,
+    showDisconnectedBluetooth: true
 };
 
 function loadSettings() {
@@ -38,13 +43,14 @@ let settings = loadSettings();
 const red    = render.makeColor(210, 45,  45);
 const yellow = render.makeColor(230, 185, 0);
 
-let bg, fg, fgDim, tempColor;
+let bg, fg, fgDim, tempColor, weatherIconColor;
 
 function updateColors() {
     const dark = settings.darkMode;
     bg        = dark ? render.makeColor(0,   0,   0)   : render.makeColor(255, 255, 255);
     fg        = dark ? render.makeColor(255, 255, 255) : render.makeColor(0,   0,   0);
     fgDim     = dark ? render.makeColor(90,  90,  90)  : render.makeColor(160, 160, 160);
+    weatherIconColor = dark ? render.makeColor(125, 125, 125) : render.makeColor(80, 80, 80);
     tempColor = dark ? render.makeColor(100, 180, 255) : render.makeColor(0,   110, 210);
 }
 
@@ -54,6 +60,7 @@ updateColors();
 const timeFont  = new render.Font("Bitham-Black",     30);
 const numFont   = new render.Font("Gothic-Bold",      28);
 const smallFont = new render.Font("Roboto-Condensed", 21);
+const tinyFont  = new render.Font("Gothic-Regular",   14);
 
 const DAYS   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun",
@@ -66,6 +73,24 @@ let lastDate = new Date();
 let location = null;
 let lastLatitude = null;
 let lastLongitude = null;
+let batteryPercent = 100;
+let isConnected = true;
+let appReady = false;
+
+const battery = new Battery({
+    onSample() {
+        batteryPercent = this.sample().percent;
+        if (appReady) drawScreen();
+    }
+});
+batteryPercent = battery.sample().percent;
+
+function checkConnection() {
+    isConnected = watch.connected.app;
+    if (appReady) drawScreen();
+}
+watch.addEventListener("connected", checkConnection);
+checkConnection();
 
 // ── Weather cache ─────────────────────────────────────────────────────────────
 function loadCachedWeather() {
@@ -144,35 +169,88 @@ function drawWeatherIcon(x, y, code) {
         drawSun(x, y, 7, yellow);
     } else if (code <= 2) {
         drawSun(x + 4, y - 5, 5, yellow);
-        drawCloud(x - 2, y + 4, fg);
+        drawCloud(x - 2, y + 4, weatherIconColor);
     } else if (code <= 44) {
-        drawCloud(x, y, fg);
+        drawCloud(x, y, weatherIconColor);
     } else if (code <= 48) {
-        drawCloud(x, y - 4, fg);
-        render.drawLine(x - 9, y + 8,  x + 9, y + 8,  fg,    2);
+        drawCloud(x, y - 4, weatherIconColor);
+        render.drawLine(x - 9, y + 8,  x + 9, y + 8,  weatherIconColor, 2);
         render.drawLine(x - 7, y + 13, x + 7, y + 13, fgDim, 2);
     } else if (code <= 67) {
-        drawCloud(x, y - 6, fg);
+        drawCloud(x, y - 6, weatherIconColor);
         const drops = code <= 55 ? 2 : 3;
         for (let i = 0; i < drops; i++) {
             const dx = x - 5 + i * 5;
             render.drawLine(dx, y + 5, dx - 3, y + 13, tempColor, 2);
         }
     } else if (code <= 77) {
-        drawSnowflake(x, y, fg);
+        drawSnowflake(x, y, weatherIconColor);
     } else if (code <= 86) {
-        drawCloud(x, y - 7, fg);
+        drawCloud(x, y - 7, weatherIconColor);
         for (let i = 0; i < 4; i++) {
             const a = (i / 4) * Math.PI * 2;
             render.drawLine(x, y + 7,
                 (x + 7 * Math.sin(a)) | 0, (y + 7 - 7 * Math.cos(a)) | 0,
-                fg, 2);
+                weatherIconColor, 2);
         }
     } else {
-        drawCloud(x, y - 7, fg);
+        drawCloud(x, y - 7, weatherIconColor);
         render.drawLine(x + 4, y + 4,  x - 2, y + 12, yellow, 3);
         render.drawLine(x - 2, y + 12, x + 4, y + 20, yellow, 3);
     }
+}
+
+function drawBatteryRing(x, y, percent) {
+    const pct = Math.max(0, Math.min(100, percent | 0));
+    const innerR = 12;
+    const outerR = 16;
+    const progress = pct / 100;
+    const steps = 180;
+    const batteryColor = pct <= 20 ? red : fg;
+
+    for (let i = 0; i < steps; i++) {
+        const t = i / steps;
+        const a = t * Math.PI * 2 - (Math.PI / 2);
+        const x1 = (x + innerR * Math.cos(a)) | 0;
+        const y1 = (y + innerR * Math.sin(a)) | 0;
+        const x2 = (x + outerR * Math.cos(a)) | 0;
+        const y2 = (y + outerR * Math.sin(a)) | 0;
+        const c = t <= progress ? batteryColor : fgDim;
+        render.drawLine(x1, y1, x2, y2, c, 1);
+    }
+
+    const label = String(pct);
+    const tw = render.getTextWidth(label, tinyFont);
+    render.drawText(label, tinyFont, fg, x - (tw >> 1), y - (tinyFont.height >> 1));
+}
+
+function drawBluetoothIcon(x, y, connected) {
+    const c = connected ? fgDim : red;
+
+    // Bluetooth rune: spine + right diamonds + crossing left diagonals.
+    const topY = y - 10;
+    const midY = y;
+    const botY = y + 10;
+    const rightTopX = x + 8;
+    const rightTopY = y - 5;
+    const rightBotX = x + 8;
+    const rightBotY = y + 5;
+
+    // Vertical spine.
+    render.drawLine(x, topY, x, botY, c, 2);
+
+    // Upper right triangle.
+    render.drawLine(x, topY, rightTopX, rightTopY, c, 2);
+    render.drawLine(rightTopX, rightTopY, x, midY, c, 2);
+
+    // Lower right triangle.
+    render.drawLine(x, midY, rightBotX, rightBotY, c, 2);
+    render.drawLine(rightBotX, rightBotY, x, botY, c, 2);
+
+    // Left crossing strokes (the part that looked "missing").
+    render.drawLine(x - 8, y - 8, x + 1, y + 1, c, 2);
+    render.drawLine(x - 8, y + 8, x + 1, y - 1, c, 2);
+
 }
 
 // ─── Clock face ───────────────────────────────────────────────────────────────
@@ -249,6 +327,28 @@ function drawInfo(now) {
         const tw2 = render.getTextWidth(tempStr, smallFont);
         render.drawText(tempStr, smallFont, tempColor, (render.width - tw2) >> 1, iconY + 16);
     }
+
+    // Place side widgets by polar coordinates so spacing follows round geometry.
+    const sideRadius = 66;
+    const leftAngle = (25 * Math.PI) / 18;   // 250°: slightly higher + more left.
+    const rightAngle = (11 * Math.PI) / 18;  // 110° mirror for right side.
+    let [leftX, leftY] = pt(leftAngle, sideRadius);
+    let [rightX, rightY] = pt(rightAngle, sideRadius);
+    leftX += 4;
+    rightX -= 4;
+
+    const shouldShowBattery = settings.showBattery || (settings.showBatteryLowOnly && batteryPercent <= 20);
+    if (shouldShowBattery) {
+        drawBatteryRing(leftX, leftY, batteryPercent);
+    }
+
+    if (isConnected) {
+        if (settings.showBluetooth)
+            drawBluetoothIcon(rightX, rightY, true);
+    } else {
+        if (settings.showDisconnectedBluetooth)
+            drawBluetoothIcon(rightX, rightY, false);
+    }
 }
 
 // ─── Main draw ────────────────────────────────────────────────────────────────
@@ -268,16 +368,16 @@ function drawScreen(event) {
     drawFace();
     drawInfo(now);
 
+    render.drawCircle(fgDim, CX, CY, 8, 0, 360);
+    render.drawCircle(red,   CX, CY, 6, 0, 360);
+    render.drawCircle(bg,    CX, CY, 3, 0, 360);
+
     drawHand(minuteAngle, 95, 12, fg, 3);
     drawHand(hourAngle,   62, 18, fg, 5);
 
     const [tipX, tipY] = pt(hourAngle, 62);
     const [midX, midY] = pt(hourAngle, 47);
     render.drawLine(midX, midY, tipX, tipY, red, 5);
-
-    render.drawCircle(fgDim, CX, CY, 8, 0, 360);
-    render.drawCircle(red,   CX, CY, 6, 0, 360);
-    render.drawCircle(bg,    CX, CY, 3, 0, 360);
 
     render.end();
 }
@@ -351,28 +451,69 @@ watch.addEventListener("hourchange",   requestLocation);
 // ─── Settings via Clay / AppMessage ──────────────────────────────────────────
 
 const message = new Message({
-    keys: ["DarkMode", "UseFahrenheit", "Use24Hour", "ShowDigitalTime", "ShowDate", "ShowWeather"],
+    keys: [
+        "DarkMode",
+        "UseFahrenheit",
+        "Use24Hour",
+        "ShowDigitalTime",
+        "ShowDate",
+        "ShowWeather",
+        "ShowBattery",
+        "ShowBatteryLowOnly",
+        "ShowBluetooth",
+        "ShowDisconnectedBluetooth"
+    ],
     onReadable() {
         try {
             const msg = this.read();
+            const getSetting = (key) => {
+                let v;
+                if (msg && (typeof msg.get === "function"))
+                    v = msg.get(key);
+                else if (msg && (key in msg))
+                    v = msg[key];
 
-            const dm = msg.get("DarkMode");
-            if (dm !== undefined) settings.darkMode = dm === 1;
+                if (v && (typeof v === "object") && ("value" in v))
+                    v = v.value;
+                return v;
+            };
 
-            const uf = msg.get("UseFahrenheit");
-            if (uf !== undefined) settings.useFahrenheit = uf === 1;
+            const asBool = (v, fallback) => {
+                if (v === undefined) return fallback;
+                if (v === true || v === 1 || v === "1" || v === "true") return true;
+                if (v === false || v === 0 || v === "0" || v === "false") return false;
+                return fallback;
+            };
 
-            const u24 = msg.get("Use24Hour");
-            if (u24 !== undefined) settings.use24Hour = u24 === 1;
+            const dm = getSetting("DarkMode");
+            if (dm !== undefined) settings.darkMode = asBool(dm, settings.darkMode);
 
-            const sdt = msg.get("ShowDigitalTime");
-            if (sdt !== undefined) settings.showDigitalTime = sdt === 1;
+            const uf = getSetting("UseFahrenheit");
+            if (uf !== undefined) settings.useFahrenheit = asBool(uf, settings.useFahrenheit);
 
-            const sd = msg.get("ShowDate");
-            if (sd !== undefined) settings.showDate = sd === 1;
+            const u24 = getSetting("Use24Hour");
+            if (u24 !== undefined) settings.use24Hour = asBool(u24, settings.use24Hour);
 
-            const sw = msg.get("ShowWeather");
-            if (sw !== undefined) settings.showWeather = sw === 1;
+            const sdt = getSetting("ShowDigitalTime");
+            if (sdt !== undefined) settings.showDigitalTime = asBool(sdt, settings.showDigitalTime);
+
+            const sd = getSetting("ShowDate");
+            if (sd !== undefined) settings.showDate = asBool(sd, settings.showDate);
+
+            const sw = getSetting("ShowWeather");
+            if (sw !== undefined) settings.showWeather = asBool(sw, settings.showWeather);
+
+            const sb = getSetting("ShowBattery");
+            if (sb !== undefined) settings.showBattery = asBool(sb, settings.showBattery);
+
+            const sblo = getSetting("ShowBatteryLowOnly");
+            if (sblo !== undefined) settings.showBatteryLowOnly = asBool(sblo, settings.showBatteryLowOnly);
+
+            const sbl = getSetting("ShowBluetooth");
+            if (sbl !== undefined) settings.showBluetooth = asBool(sbl, settings.showBluetooth);
+
+            const sdb = getSetting("ShowDisconnectedBluetooth");
+            if (sdb !== undefined) settings.showDisconnectedBluetooth = asBool(sdb, settings.showDisconnectedBluetooth);
 
             const unitChanged = uf !== undefined;
             const weatherVisibilityChanged = sw !== undefined;
@@ -410,4 +551,6 @@ const message = new Message({
 
 // ─── Initial weather fetch ────────────────────────────────────────────────────
 
+appReady = true;
+drawScreen();
 requestLocation();
