@@ -4,6 +4,8 @@ int main(void) {
   Window *w = window_create();
   window_stack_push(w, true);
 
+  // This larger fixed pool is required by the watchface's Alloy snapshot.
+  // Firmware-managed defaults exhaust the chunk heap during startup.
   ModdableCreationRecord creation = {
     .recordSize = sizeof(ModdableCreationRecord),
     .stack = 6144,
