@@ -415,8 +415,8 @@ async function fetchWeather(lat, lon) {
     fetching = true;
     try {
         const unit = settings.useFahrenheit ? "fahrenheit" : "celsius";
-        const url = `http://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=${unit}`;
-        const response = await fetch(url);
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=${unit}`;
+        const response = await fetch(url, { headers: [] });
         const data = await response.json();
 
         weatherTemp = Math.round(data.current.temperature_2m);
@@ -451,6 +451,11 @@ watch.addEventListener("hourchange",   requestLocation);
 // ─── Settings via Clay / AppMessage ──────────────────────────────────────────
 
 const message = new Message({
+    // The default is the platform maximum (8.2 KB in each direction), which
+    // exhausts native heap on Round 2 before the Alloy VM finishes starting.
+    // Settings messages and the SDK's proxy traffic fit comfortably in 1 KB.
+    input: 1024,
+    output: 1024,
     keys: [
         "DarkMode",
         "UseFahrenheit",
